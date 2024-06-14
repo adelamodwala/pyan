@@ -4,7 +4,9 @@
 """Abstract node representing data gathered from the analysis."""
 
 from enum import Enum
-
+from random import randint
+from pyan.ast_tree_walker import extract_function_call_args, extract_arguments
+import json
 
 def make_safe_label(label):
     """Avoid name clashes with GraphViz reserved words such as 'graph'."""
@@ -119,8 +121,26 @@ class Node:
     def get_long_annotated_name(self):
         """Return the short name, plus namespace, and module and line number of definition site, if available.
         Names of unknown nodes will include the *. prefix."""
+        func_args = extract_arguments(self.ast_node) if self.flavor == Flavor.FUNCTION else None
+        func_args_dict = {}
+        key = None
+        if func_args:
+            for arg in func_args:
+                if isinstance(arg, str) and arg.startswith("::"):
+                    key = str(randint(10000, 99999)) + arg
+                    continue
+                # if arg.startswith("http"):
+                else:
+                    key = key if key is not None else "func"
+                    if key in func_args_dict:
+                        func_args_dict[key].append(arg)
+                    else:
+                        func_args_dict[key] = [arg]
+
+        args_str = "\n calls: %s" % (json.dumps(func_args_dict).replace('"', "'")) if func_args_dict else ""
+
         if self.namespace is None:
-            return "*." + self.name
+            return "*." + self.name + args_str
         else:
             if self.get_level() >= 1:
                 if self.ast_node is not None:
@@ -130,11 +150,11 @@ class Node:
                         self.ast_node.lineno,
                         repr(self.flavor),
                         self.namespace,
-                    )
+                    ) + args_str
                 else:
-                    return "%s\\n\\n(%s in %s)" % (self.name, repr(self.flavor), self.namespace)
+                    return "%s\\n\\n(%s in %s)" % (self.name, repr(self.flavor), self.namespace) + args_str
             else:
-                return self.name
+                return self.name + args_str
 
     def get_name(self):
         """Return the full name of this node."""
