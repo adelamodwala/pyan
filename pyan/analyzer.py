@@ -219,10 +219,15 @@ class CallGraphVisitor(ast.NodeVisitor):
                             and from_node.flavor == Flavor.IMPORTEDITEM
                         ):
                             # use define edges as potential candidates
-                            for candidate_to_node in self.defines_edges[to_node]:  #
-                                if candidate_to_node.name == node.name:
-                                    attribute_import_mapping[node] = candidate_to_node
-                                    break
+                            edge_nodes = None
+                            try:
+                                edge_nodes = self.defines_edges[to_node]
+                                for candidate_to_node in edge_nodes:  #
+                                    if candidate_to_node.name == node.name:
+                                        attribute_import_mapping[node] = candidate_to_node
+                                        break
+                            except KeyError:
+                                print('Could not find edge nodes for %s', to_node.name)
         import_mapping.update(attribute_import_mapping)
 
         # remap nodes based on import mapping
